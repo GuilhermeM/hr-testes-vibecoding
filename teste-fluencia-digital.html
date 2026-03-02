@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste de Fluência Digital</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0f172a; }
+    textarea:focus, button:focus { outline: none; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect, useRef, useCallback } = React;
+
+    const SUPABASE_URL = "https://ttfdmujtekgkaeenvgjw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0ZmRtdWp0ZWtna2FlZW52Z2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NzQxMDAsImV4cCI6MjA4ODA1MDEwMH0.fWlFMi_39fIePMj4rHY2Xz1AzJrXmzU99Tg6UrbwAXA";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const SECTIONS = [
+      { id: "typing", label: "Digitação", icon: "⌨️", questions: 1 },
+      { id: "shortcuts", label: "Atalhos", icon: "⚡", questions: 5 },
+      { id: "browser", label: "Navegador", icon: "🌐", questions: 5 },
+      { id: "files", label: "Arquivos", icon: "📁", questions: 5 },
+      { id: "logic", label: "Lógica", icon: "🧩", questions: 5 },
+      { id: "search", label: "Pesquisa", icon: "🔍", questions: 3 },
+    ];
+
+    const TYPING_TEXT =
+      "O vibecoding permite criar aplicações usando inteligência artificial como assistente. Você descreve o que quer em linguagem natural e a IA gera o código. Para isso funcionar bem, você precisa saber navegar no computador, digitar com agilidade e entender conceitos básicos de como as coisas funcionam na web.";
+
+    const SHORTCUTS_QUESTIONS = [
+      {
+        q: "Você digitou um parágrafo inteiro errado e quer desfazer tudo rapidamente. Qual atalho usa?",
+        options: ["Ctrl + Z", "Ctrl + X", "Ctrl + D", "Alt + F4"],
+        correct: 0,
+      },
+      {
+        q: "Precisa copiar um trecho de código de um site e colar no seu editor. Quais atalhos usa (nessa ordem)?",
+        options: [
+          "Ctrl + C → Ctrl + V",
+          "Ctrl + X → Ctrl + P",
+          "Ctrl + A → Ctrl + S",
+          "Ctrl + D → Ctrl + V",
+        ],
+        correct: 0,
+      },
+      {
+        q: "Você está com 8 abas abertas no navegador e precisa trocar para o editor de código rapidamente. O que faz?",
+        options: [
+          "Minimizo tudo e clico no ícone",
+          "Alt + Tab",
+          "Ctrl + W",
+          "Fecho o navegador e abro o editor",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Quer buscar a palavra 'error' dentro de uma página enorme. Qual atalho?",
+        options: ["Ctrl + F", "Ctrl + B", "Ctrl + H", "Ctrl + E"],
+        correct: 0,
+      },
+      {
+        q: "Salvou um arquivo e quer ter certeza que as alterações foram gravadas. Qual atalho é pra salvar?",
+        options: ["Ctrl + P", "Ctrl + N", "Ctrl + S", "Ctrl + W"],
+        correct: 2,
+      },
+    ];
+
+    const BROWSER_QUESTIONS = [
+      {
+        q: "O que é a 'barra de endereço' do navegador?",
+        options: [
+          "A barra onde digito URLs e faço pesquisas no topo",
+          "A barra de favoritos",
+          "O menu de configurações",
+          "A barra que mostra o progresso do download",
+        ],
+        correct: 0,
+      },
+      {
+        q: "O que acontece quando você clica com botão direito em uma imagem no navegador?",
+        options: [
+          "A imagem é deletada",
+          "Abre um menu com opções como salvar, copiar, inspecionar",
+          "A imagem aumenta de tamanho",
+          "Abre uma nova aba",
+        ],
+        correct: 1,
+      },
+      {
+        q: "O que é o 'Inspecionar Elemento' (DevTools) do navegador?",
+        options: [
+          "Um antivírus embutido",
+          "Uma ferramenta que mostra e permite editar o código HTML/CSS da página",
+          "Um conversor de PDF",
+          "Um bloqueador de anúncios",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Você abriu muitas abas e o navegador ficou lento. O que NÃO ajuda?",
+        options: [
+          "Fechar abas que não estou usando",
+          "Abrir mais abas para dividir o processamento",
+          "Reiniciar o navegador",
+          "Verificar extensões que consomem muita memória",
+        ],
+        correct: 1,
+      },
+      {
+        q: "O que é uma extensão de navegador?",
+        options: [
+          "Um cabo que conecta o computador à internet",
+          "Um mini programa que adiciona funcionalidades ao navegador",
+          "Uma atualização obrigatória do sistema",
+          "O tamanho da janela do navegador",
+        ],
+        correct: 1,
+      },
+    ];
+
+    const FILES_QUESTIONS = [
+      {
+        q: "Qual a diferença entre os arquivos 'foto.jpg' e 'foto.png'?",
+        options: [
+          "Nenhuma diferença, são a mesma coisa",
+          "São formatos diferentes de imagem — .png suporta transparência, .jpg é mais leve",
+          ".jpg é para fotos e .png é para vídeos",
+          ".png só funciona no Mac",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Você baixou um arquivo e não sabe onde foi parar. O que faz?",
+        options: [
+          "Baixo de novo e torço para aparecer",
+          "Verifico a pasta de Downloads ou as configurações de download do navegador",
+          "Reinicio o computador",
+          "É impossível encontrar, preciso pedir o arquivo de novo",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Qual destes é um arquivo de código que você vai lidar no vibecoding?",
+        options: ["relatorio.docx", "musica.mp3", "index.html", "foto.psd"],
+        correct: 2,
+      },
+      {
+        q: "Precisa organizar um projeto com vários arquivos. O que faz?",
+        options: [
+          "Jogo tudo na área de trabalho",
+          "Crio uma estrutura de pastas organizada (ex: /projeto/css, /projeto/js)",
+          "Coloco tudo numa pasta chamada 'coisas'",
+          "Não organizo, o computador encontra sozinho",
+        ],
+        correct: 1,
+      },
+      {
+        q: "O que é um arquivo .zip?",
+        options: [
+          "Um vírus",
+          "Um arquivo compactado que pode conter vários arquivos dentro",
+          "Um tipo de imagem",
+          "Uma extensão só do Windows",
+        ],
+        correct: 1,
+      },
+    ];
+
+    const LOGIC_QUESTIONS = [
+      {
+        q: "Se eu digo: 'SE estiver chovendo, ENTÃO leve guarda-chuva, SENÃO leve óculos de sol'. Está sol. O que você leva?",
+        options: ["Guarda-chuva", "Óculos de sol", "Os dois", "Nenhum"],
+        correct: 1,
+      },
+      {
+        q: "Uma receita diz: '1) Aqueça o forno. 2) Misture os ingredientes. 3) Coloque no forno.' Se pular o passo 1, o que acontece?",
+        options: [
+          "Funciona igual",
+          "O bolo não assa porque o forno está frio",
+          "O forno liga sozinho",
+          "Os ingredientes se misturam automaticamente",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Tenho uma lista: [maçã, banana, laranja]. Se peço o item na posição 0, o que recebo?",
+        options: ["Nada, não existe posição 0", "Banana", "Maçã", "Laranja"],
+        correct: 2,
+      },
+      {
+        q: "Um programa tem um erro e mostra: 'Erro na linha 42: variável não definida'. O que isso significa?",
+        options: [
+          "O computador está quebrado",
+          "Na linha 42, estou tentando usar algo que não foi criado antes",
+          "Preciso instalar uma atualização",
+          "O programa inteiro precisa ser reescrito",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Qual é o resultado? Passo 1: x = 5. Passo 2: x = x + 3. Passo 3: Qual o valor de x?",
+        options: ["5", "3", "8", "53"],
+        correct: 2,
+      },
+    ];
+
+    const SEARCH_QUESTIONS = [
+      {
+        q: "Quer aprender como centralizar uma div em CSS. Qual pesquisa é mais eficiente?",
+        options: [
+          "como eu faço para colocar aquele negócio no meio da tela usando programação de site",
+          "centralizar div CSS flexbox",
+          "CSS help please",
+          "div center how what",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Encontrou um erro no código: 'TypeError: Cannot read property of undefined'. O que faz?",
+        options: [
+          "Desisto e começo do zero",
+          "Copio a mensagem de erro exata e pesquiso no Google",
+          "Ignoro e continuo",
+          "Reinicio o computador",
+        ],
+        correct: 1,
+      },
+      {
+        q: "Precisa de documentação confiável sobre JavaScript. Qual fonte é mais confiável?",
+        options: [
+          "Um post aleatório do Yahoo Respostas",
+          "MDN Web Docs (developer.mozilla.org)",
+          "Uma resposta sem votos no fórum",
+          "Um vídeo de TikTok",
+        ],
+        correct: 1,
+      },
+    ];
+
+    const ALL_QUESTIONS = {
+      shortcuts: SHORTCUTS_QUESTIONS,
+      browser: BROWSER_QUESTIONS,
+      files: FILES_QUESTIONS,
+      logic: LOGIC_QUESTIONS,
+      search: SEARCH_QUESTIONS,
+    };
+
+    function getGrade(pct) {
+      if (pct >= 90) return { label: "Excelente", color: "#22c55e", emoji: "🚀" };
+      if (pct >= 70) return { label: "Bom", color: "#3b82f6", emoji: "👍" };
+      if (pct >= 50) return { label: "Regular", color: "#f59e0b", emoji: "⚠️" };
+      return { label: "Precisa praticar", color: "#ef4444", emoji: "📚" };
+    }
+
+    function getOverallVerdict(scores) {
+      const avg =
+        Object.values(scores).reduce((a, b) => a + b, 0) /
+        Object.values(scores).length;
+      if (avg >= 80)
+        return {
+          title: "Pronto pra vibecodar! 🎉",
+          msg: "Você tem uma boa base de fluência digital. Pode começar o curso de vibecoding direto sem problemas.",
+          color: "#22c55e",
+        };
+      if (avg >= 55)
+        return {
+          title: "Quase lá! 💪",
+          msg: "Você tem uma base razoável mas precisa fortalecer algumas áreas antes de começar. Foque nos tópicos com nota mais baixa por 1-2 semanas.",
+          color: "#3b82f6",
+        };
+      return {
+        title: "Vamos preparar o terreno primeiro 🌱",
+        msg: "Recomendo dedicar 2-3 semanas praticando as habilidades básicas de computador antes de iniciar o vibecoding. Não é nada demais — todo mundo começa de algum lugar!",
+        color: "#f59e0b",
+      };
+    }
+
+    // Typing test
+    function TypingTest({ onComplete }) {
+      const [started, setStarted] = useState(false);
+      const [input, setInput] = useState("");
+      const [startTime, setStartTime] = useState(null);
+      const [result, setResult] = useState(null);
+      const inputRef = useRef(null);
+
+      const handleStart = () => {
+        setStarted(true);
+        setStartTime(Date.now());
+        setTimeout(() => inputRef.current?.focus(), 100);
+      };
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+        setInput(val);
+        if (val.length >= TYPING_TEXT.length) {
+          finishTest(val);
+        }
+      };
+
+      const finishTest = (val) => {
+        const elapsed = (Date.now() - startTime) / 1000 / 60;
+        const words = val.trim().split(/\s+/).length;
+        const wpm = Math.round(words / elapsed);
+        let correctChars = 0;
+        for (let i = 0; i < Math.min(val.length, TYPING_TEXT.length); i++) {
+          if (val[i] === TYPING_TEXT[i]) correctChars++;
+        }
+        const accuracy = Math.round(
+          (correctChars / Math.max(val.length, TYPING_TEXT.length)) * 100
+        );
+        const score = Math.min(
+          100,
+          Math.round((Math.min(wpm, 60) / 60) * 50 + (accuracy / 100) * 50)
+        );
+        const r = { wpm, accuracy, score };
+        setResult(r);
+        onComplete(r.score);
+      };
+
+      const getCharColor = (i) => {
+        if (i >= input.length) return "#6b7280";
+        return input[i] === TYPING_TEXT[i] ? "#22c55e" : "#ef4444";
+      };
+
+      if (result) {
+        const g = getGrade(result.score);
+        return (
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>{g.emoji}</div>
+            <div style={{ fontSize: "1.5rem", fontWeight: 700, color: g.color, marginBottom: "1rem" }}>{g.label}</div>
+            <div style={{ display: "flex", justifyContent: "center", gap: "2rem", marginBottom: "1rem" }}>
+              <div>
+                <div style={{ fontSize: "2rem", fontWeight: 700, color: "#e2e8f0" }}>{result.wpm}</div>
+                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>palavras/min</div>
+              </div>
+              <div>
+                <div style={{ fontSize: "2rem", fontWeight: 700, color: "#e2e8f0" }}>{result.accuracy}%</div>
+                <div style={{ fontSize: "0.8rem", color: "#94a3b8" }}>precisão</div>
+              </div>
+            </div>
+            <div style={{ fontSize: "0.85rem", color: "#94a3b8", maxWidth: 400, margin: "0 auto" }}>
+              {result.wpm >= 40 ? "Boa velocidade de digitação!" : result.wpm >= 25 ? "Velocidade ok, mas vale praticar mais." : "Recomendo praticar digitação — tente o site keybr.com por 15min/dia."}
+            </div>
+          </div>
+        );
+      }
+
+      if (!started) {
+        return (
+          <div style={{ textAlign: "center", padding: "2rem" }}>
+            <p style={{ color: "#cbd5e1", marginBottom: "0.5rem", fontSize: "0.95rem" }}>
+              Você vai digitar o texto abaixo o mais rápido e correto possível.
+            </p>
+            <p style={{ color: "#64748b", marginBottom: "1.5rem", fontSize: "0.8rem" }}>
+              Não vale copiar e colar! 😉
+            </p>
+            <button
+              onClick={handleStart}
+              style={{
+                padding: "0.75rem 2.5rem",
+                background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                color: "#fff",
+                border: "none",
+                borderRadius: 12,
+                fontSize: "1.1rem",
+                fontWeight: 600,
+                cursor: "pointer",
+                transition: "transform 0.15s",
+              }}
+              onMouseOver={(e) => (e.target.style.transform = "scale(1.05)")}
+              onMouseOut={(e) => (e.target.style.transform = "scale(1)")}
+            >
+              Começar Teste de Digitação
+            </button>
+          </div>
+        );
+      }
+
+      return (
+        <div style={{ padding: "1rem" }}>
+          <div
+            style={{
+              background: "#0f172a",
+              borderRadius: 12,
+              padding: "1.25rem",
+              marginBottom: "1rem",
+              lineHeight: 1.8,
+              fontSize: "1rem",
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              letterSpacing: "0.02em",
+              border: "1px solid #1e293b",
+            }}
+          >
+            {TYPING_TEXT.split("").map((char, i) => (
+              <span
+                key={i}
+                style={{
+                  color: getCharColor(i),
+                  backgroundColor: i === input.length ? "rgba(99,102,241,0.35)" : "transparent",
+                  borderRadius: 2,
+                  transition: "color 0.1s",
+                }}
+              >
+                {char}
+              </span>
+            ))}
+          </div>
+          <textarea
+            ref={inputRef}
+            value={input}
+            onChange={handleChange}
+            onPaste={(e) => e.preventDefault()}
+            placeholder="Comece a digitar aqui..."
+            style={{
+              width: "100%",
+              minHeight: 100,
+              background: "#0f172a",
+              color: "#e2e8f0",
+              border: "2px solid #6366f1",
+              borderRadius: 12,
+              padding: "1rem",
+              fontSize: "1rem",
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              resize: "none",
+              outline: "none",
+              boxSizing: "border-box",
+            }}
+          />
+          <div style={{ textAlign: "right", color: "#64748b", fontSize: "0.8rem", marginTop: 4 }}>
+            {input.length}/{TYPING_TEXT.length} caracteres
+          </div>
+          {input.length > 0 && (
+            <button
+              onClick={() => finishTest(input)}
+              style={{
+                marginTop: "0.5rem",
+                padding: "0.5rem 1.5rem",
+                background: "#334155",
+                color: "#cbd5e1",
+                border: "1px solid #475569",
+                borderRadius: 8,
+                cursor: "pointer",
+                fontSize: "0.85rem",
+              }}
+            >
+              Finalizar teste antecipado
+            </button>
+          )}
+        </div>
+      );
+    }
+
+    // Quiz
+    function QuizSection({ sectionId, questions, onComplete }) {
+      const [current, setCurrent] = useState(0);
+      const [selected, setSelected] = useState(null);
+      const [showResult, setShowResult] = useState(false);
+      const [correctCount, setCorrectCount] = useState(0);
+      const [answered, setAnswered] = useState(false);
+      const [answers, setAnswers] = useState([]);
+
+      const handleSelect = (idx) => {
+        if (answered) return;
+        setSelected(idx);
+        setAnswered(true);
+        const isCorrect = idx === questions[current].correct;
+        if (isCorrect) setCorrectCount((c) => c + 1);
+
+        const newAnswer = {
+          pergunta: questions[current].q,
+          resposta_escolhida: questions[current].options[idx],
+          resposta_correta: questions[current].options[questions[current].correct],
+          acertou: isCorrect,
+        };
+        const updatedAnswers = [...answers, newAnswer];
+        setAnswers(updatedAnswers);
+
+        setShowResult(true);
+        setTimeout(() => {
+          if (current < questions.length - 1) {
+            setCurrent((c) => c + 1);
+            setSelected(null);
+            setShowResult(false);
+            setAnswered(false);
+          } else {
+            const finalCorrect = correctCount + (isCorrect ? 1 : 0);
+            const score = Math.round((finalCorrect / questions.length) * 100);
+            onComplete(score, updatedAnswers);
+          }
+        }, 1200);
+      };
+
+      const q = questions[current];
+
+      return (
+        <div style={{ padding: "1rem" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+            <span style={{ color: "#94a3b8", fontSize: "0.8rem" }}>
+              Pergunta {current + 1} de {questions.length}
+            </span>
+            <div style={{ display: "flex", gap: 4 }}>
+              {questions.map((_, i) => (
+                <div
+                  key={i}
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: i < current ? "#6366f1" : i === current ? "#a5b4fc" : "#334155",
+                    transition: "background 0.3s",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+
+          <p style={{ color: "#e2e8f0", fontSize: "1.05rem", fontWeight: 500, marginBottom: "1.25rem", lineHeight: 1.5 }}>
+            {q.q}
+          </p>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.6rem" }}>
+            {q.options.map((opt, i) => {
+              let bg = "#1e293b";
+              let border = "1px solid #334155";
+              let color = "#cbd5e1";
+              if (showResult) {
+                if (i === q.correct) {
+                  bg = "rgba(34,197,94,0.15)";
+                  border = "1px solid #22c55e";
+                  color = "#22c55e";
+                } else if (i === selected && i !== q.correct) {
+                  bg = "rgba(239,68,68,0.15)";
+                  border = "1px solid #ef4444";
+                  color = "#ef4444";
+                }
+              } else if (i === selected) {
+                bg = "rgba(99,102,241,0.2)";
+                border = "1px solid #6366f1";
+              }
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleSelect(i)}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.75rem",
+                    padding: "0.85rem 1rem",
+                    background: bg,
+                    border,
+                    borderRadius: 10,
+                    color,
+                    fontSize: "0.95rem",
+                    cursor: answered ? "default" : "pointer",
+                    textAlign: "left",
+                    transition: "all 0.2s",
+                    opacity: showResult && i !== q.correct && i !== selected ? 0.4 : 1,
+                  }}
+                  onMouseOver={(e) => {
+                    if (!answered) e.currentTarget.style.background = "rgba(99,102,241,0.12)";
+                  }}
+                  onMouseOut={(e) => {
+                    if (!answered && i !== selected) e.currentTarget.style.background = "#1e293b";
+                  }}
+                >
+                  <span
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      width: 28,
+                      height: 28,
+                      borderRadius: "50%",
+                      background: showResult && i === q.correct ? "#22c55e" : "rgba(99,102,241,0.2)",
+                      color: showResult && i === q.correct ? "#fff" : "#a5b4fc",
+                      fontSize: "0.75rem",
+                      fontWeight: 700,
+                      flexShrink: 0,
+                    }}
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  {opt}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // Results
+    function Results({ scores, typingScore, onRestart, saving, saved, candidato }) {
+      const sectionData = [
+        { id: "typing", label: "Digitação", icon: "⌨️", score: typingScore, tip: "Pratique no keybr.com ou monkeytype.com — 15min/dia faz muita diferença." },
+        { id: "shortcuts", label: "Atalhos", icon: "⚡", score: scores.shortcuts, tip: "Cole uma lista dos atalhos principais na parede e force-se a usá-los por 1 semana." },
+        { id: "browser", label: "Navegador", icon: "🌐", score: scores.browser, tip: "Explore as abas, DevTools (F12) e extensões. Navegue com curiosidade." },
+        { id: "files", label: "Arquivos", icon: "📁", score: scores.files, tip: "Crie uma pasta, mova arquivos, renomeie, extraia .zip — pratique no explorador de arquivos." },
+        { id: "logic", label: "Lógica", icon: "🧩", score: scores.logic, tip: "Tente exercícios de lógica em sites como Scratch ou code.org antes de começar." },
+        { id: "search", label: "Pesquisa", icon: "🔍", score: scores.search, tip: "Pesquise erros reais no Google, explore o Stack Overflow e a MDN." },
+      ];
+
+      const allScores = sectionData.reduce((acc, s) => {
+        acc[s.id] = s.score ?? 0;
+        return acc;
+      }, {});
+      const verdict = getOverallVerdict(allScores);
+      const avgScore = Math.round(Object.values(allScores).reduce((a, b) => a + b, 0) / Object.values(allScores).length);
+
+      return (
+        <div style={{ padding: "1.5rem" }}>
+          <div
+            style={{
+              textAlign: "center",
+              padding: "2rem",
+              background: `linear-gradient(135deg, ${verdict.color}15, ${verdict.color}08)`,
+              borderRadius: 16,
+              border: `1px solid ${verdict.color}40`,
+              marginBottom: "2rem",
+            }}
+          >
+            <div style={{ fontSize: "3.5rem", fontWeight: 800, color: verdict.color, marginBottom: "0.25rem" }}>
+              {avgScore}<span style={{ fontSize: "1.5rem" }}>/100</span>
+            </div>
+            <div style={{ fontSize: "1.4rem", fontWeight: 700, color: "#e2e8f0", marginBottom: "0.5rem" }}>
+              {verdict.title}
+            </div>
+            <p style={{ color: "#94a3b8", fontSize: "0.95rem", maxWidth: 500, margin: "0 auto", lineHeight: 1.6 }}>
+              {verdict.msg}
+            </p>
+          </div>
+
+          <h3 style={{ color: "#e2e8f0", fontSize: "1.1rem", fontWeight: 600, marginBottom: "1rem" }}>
+            Detalhamento por Área
+          </h3>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+            {sectionData.map((s) => {
+              const g = getGrade(s.score ?? 0);
+              const showTip = (s.score ?? 0) < 70;
+              return (
+                <div
+                  key={s.id}
+                  style={{
+                    background: "#1e293b",
+                    borderRadius: 12,
+                    padding: "1rem 1.25rem",
+                    border: "1px solid #334155",
+                  }}
+                >
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: showTip ? "0.6rem" : 0 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                      <span style={{ fontSize: "1.2rem" }}>{s.icon}</span>
+                      <span style={{ color: "#e2e8f0", fontWeight: 500 }}>{s.label}</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                      <div style={{ width: 120, height: 8, background: "#0f172a", borderRadius: 4, overflow: "hidden" }}>
+                        <div
+                          style={{
+                            width: `${s.score ?? 0}%`,
+                            height: "100%",
+                            background: g.color,
+                            borderRadius: 4,
+                            transition: "width 1s ease",
+                          }}
+                        />
+                      </div>
+                      <span style={{ color: g.color, fontWeight: 700, fontSize: "0.9rem", minWidth: 35, textAlign: "right" }}>
+                        {s.score ?? 0}%
+                      </span>
+                    </div>
+                  </div>
+                  {showTip && (
+                    <p style={{ color: "#94a3b8", fontSize: "0.8rem", margin: 0, paddingLeft: "2rem", lineHeight: 1.5 }}>
+                      💡 {s.tip}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Status de salvamento e mensagem final */}
+          <div style={{
+            textAlign: "center", marginTop: "2rem", padding: "2rem",
+            background: "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(34,197,94,0.05))",
+            borderRadius: 16, border: "1px solid rgba(34,197,94,0.2)",
+          }}>
+            {saving && (
+              <div>
+                <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>⏳</div>
+                <span style={{ color: "#94a3b8", fontSize: "0.95rem" }}>Salvando resultado...</span>
+              </div>
+            )}
+            {saved && (
+              <div>
+                <div style={{ fontSize: "2.5rem", marginBottom: "0.75rem" }}>🎉</div>
+                <h3 style={{ color: "#22c55e", fontSize: "1.3rem", fontWeight: 700, marginBottom: "0.5rem" }}>
+                  Teste Concluido!
+                </h3>
+                <p style={{ color: "#cbd5e1", fontSize: "0.95rem", lineHeight: 1.7 }}>
+                  Obrigado, <strong style={{ color: "#e2e8f0" }}>{candidato.nome}</strong>! Seus resultados das 2 partes foram registrados com sucesso.
+                </p>
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: "0.75rem", lineHeight: 1.6 }}>
+                  Estamos analisando seus resultados e entraremos em contato pelo email <strong style={{ color: "#a5b4fc" }}>{candidato.email}</strong>.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Main App
+    function App() {
+      // Ler nome/email dos query params da URL (vem do teste-digitacao.html)
+      const urlParams = new URLSearchParams(window.location.search);
+      const candidato = { nome: urlParams.get("nome") || "", email: urlParams.get("email") || "" };
+
+      const [phase, setPhase] = useState("intro");
+      const [scores, setScores] = useState({});
+      const [typingScore, setTypingScore] = useState(0);
+      const [sectionIndex, setSectionIndex] = useState(-1);
+      const [saving, setSaving] = useState(false);
+      const [saved, setSaved] = useState(false);
+      const [allAnswers, setAllAnswers] = useState({});
+
+      const sectionOrder = ["typing", "shortcuts", "browser", "files", "logic", "search"];
+
+      const startTest = () => {
+        setPhase("typing");
+        setSectionIndex(0);
+      };
+
+      const handleSectionComplete = (score, sectionAnswers) => {
+        const current = sectionOrder[sectionIndex];
+        let newScores = scores;
+        let newTypingScore = typingScore;
+        let newAllAnswers = allAnswers;
+        if (current === "typing") {
+          newTypingScore = score;
+          setTypingScore(score);
+        } else {
+          newScores = { ...scores, [current]: score };
+          setScores(newScores);
+        }
+        if (sectionAnswers) {
+          newAllAnswers = { ...allAnswers, [current]: sectionAnswers };
+          setAllAnswers(newAllAnswers);
+        }
+        setTimeout(() => {
+          const next = sectionIndex + 1;
+          if (next < sectionOrder.length) {
+            setSectionIndex(next);
+            setPhase(sectionOrder[next]);
+          } else {
+            setPhase("results");
+            // Salvar no Supabase
+            const allScores = { typing: newTypingScore, ...newScores };
+            const avg = Math.round(Object.values(allScores).reduce((a, b) => a + b, 0) / Object.values(allScores).length);
+            const verdict = getOverallVerdict(allScores);
+            setSaving(true);
+            supabase.from("resultados_fluencia").insert({
+              nome: candidato.nome,
+              email: candidato.email,
+              score_geral: avg,
+              score_digitacao: newTypingScore,
+              score_atalhos: newScores.shortcuts || 0,
+              score_navegador: newScores.browser || 0,
+              score_arquivos: newScores.files || 0,
+              score_logica: newScores.logic || 0,
+              score_pesquisa: newScores.search || 0,
+              nivel: getGrade(avg).label,
+              veredicto: verdict.title,
+              respostas_detalhadas: newAllAnswers,
+            }).then(({ error }) => {
+              setSaving(false);
+              if (!error) setSaved(true);
+              else console.error("Erro ao salvar:", error);
+            });
+          }
+        }, 800);
+      };
+
+      const restart = () => {
+        setPhase("intro");
+        setScores({});
+        setTypingScore(0);
+        setSectionIndex(-1);
+        setSaved(false);
+      };
+
+      const currentSection = sectionOrder[sectionIndex];
+      const currentSectionMeta = SECTIONS.find((s) => s.id === currentSection);
+      const progress = sectionIndex >= 0 ? ((sectionIndex) / sectionOrder.length) * 100 : 0;
+
+      return (
+        <div
+          style={{
+            minHeight: "100vh",
+            background: "#0f172a",
+            fontFamily: "'Outfit', 'Satoshi', system-ui, sans-serif",
+            color: "#e2e8f0",
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              padding: "1.25rem 1.5rem",
+              borderBottom: "1px solid #1e293b",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <span style={{ fontSize: "1.4rem" }}>🖥️</span>
+              <span style={{ fontWeight: 700, fontSize: "1.1rem", letterSpacing: "-0.02em" }}>
+                Teste de Fluência Digital
+              </span>
+            </div>
+            {sectionIndex >= 0 && phase !== "results" && (
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                {sectionOrder.map((s, i) => {
+                  const meta = SECTIONS.find((sec) => sec.id === s);
+                  const done = i < sectionIndex;
+                  const active = i === sectionIndex;
+                  return (
+                    <div
+                      key={s}
+                      title={meta.label}
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "0.9rem",
+                        background: done ? "#6366f1" : active ? "#334155" : "#1e293b",
+                        border: active ? "2px solid #6366f1" : "1px solid #334155",
+                        opacity: done ? 1 : active ? 1 : 0.4,
+                        transition: "all 0.3s",
+                      }}
+                    >
+                      {done ? "✓" : meta.icon}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Progress bar */}
+          {sectionIndex >= 0 && phase !== "results" && (
+            <div style={{ height: 3, background: "#1e293b" }}>
+              <div
+                style={{
+                  height: "100%",
+                  width: `${progress}%`,
+                  background: "linear-gradient(90deg, #6366f1, #8b5cf6)",
+                  transition: "width 0.5s ease",
+                }}
+              />
+            </div>
+          )}
+
+          {/* Content */}
+          <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 1rem" }}>
+            {phase === "intro" && (
+              <div style={{ textAlign: "center", paddingTop: "4rem" }}>
+                <div
+                  style={{
+                    fontSize: "4rem",
+                    marginBottom: "1rem",
+                    filter: "drop-shadow(0 0 30px rgba(99,102,241,0.3))",
+                  }}
+                >
+                  🖥️
+                </div>
+                <h1
+                  style={{
+                    fontSize: "2rem",
+                    fontWeight: 800,
+                    letterSpacing: "-0.03em",
+                    marginBottom: "0.5rem",
+                    background: "linear-gradient(135deg, #e2e8f0, #94a3b8)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  Teste de Fluência Digital
+                </h1>
+                <p style={{ color: "#64748b", fontSize: "1.05rem", marginBottom: "2.5rem", lineHeight: 1.6, maxWidth: 460, margin: "0 auto 2.5rem" }}>
+                  Antes de começar a vibecodar, vamos ver como anda sua fluência com o computador. São 6 seções rápidas — leva uns 10 minutos.
+                </p>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(3, 1fr)",
+                    gap: "0.75rem",
+                    marginBottom: "2.5rem",
+                    maxWidth: 420,
+                    margin: "0 auto 2.5rem",
+                  }}
+                >
+                  {SECTIONS.map((s) => (
+                    <div
+                      key={s.id}
+                      style={{
+                        background: "#1e293b",
+                        borderRadius: 12,
+                        padding: "1rem 0.5rem",
+                        border: "1px solid #334155",
+                        textAlign: "center",
+                      }}
+                    >
+                      <div style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>{s.icon}</div>
+                      <div style={{ fontSize: "0.75rem", color: "#94a3b8", fontWeight: 500 }}>{s.label}</div>
+                    </div>
+                  ))}
+                </div>
+
+                <button
+                  onClick={startTest}
+                  style={{
+                    padding: "0.9rem 3rem",
+                    background: "linear-gradient(135deg, #6366f1, #8b5cf6)",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 14,
+                    fontSize: "1.15rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 24px rgba(99,102,241,0.3)",
+                    transition: "transform 0.15s, box-shadow 0.15s",
+                  }}
+                  onMouseOver={(e) => {
+                    e.target.style.transform = "scale(1.05)";
+                    e.target.style.boxShadow = "0 6px 32px rgba(99,102,241,0.5)";
+                  }}
+                  onMouseOut={(e) => {
+                    e.target.style.transform = "scale(1)";
+                    e.target.style.boxShadow = "0 4px 24px rgba(99,102,241,0.3)";
+                  }}
+                >
+                  Começar Teste →
+                </button>
+              </div>
+            )}
+
+            {phase !== "intro" && phase !== "results" && (
+              <div style={{ paddingTop: "1.5rem" }}>
+                {currentSectionMeta && (
+                  <div style={{ marginBottom: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                    <span style={{ fontSize: "1.3rem" }}>{currentSectionMeta.icon}</span>
+                    <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>{currentSectionMeta.label}</h2>
+                  </div>
+                )}
+
+                {phase === "typing" && <TypingTest onComplete={handleSectionComplete} />}
+                {phase !== "typing" && ALL_QUESTIONS[phase] && (
+                  <QuizSection
+                    key={phase}
+                    sectionId={phase}
+                    questions={ALL_QUESTIONS[phase]}
+                    onComplete={handleSectionComplete}
+                  />
+                )}
+              </div>
+            )}
+
+            {phase === "results" && (
+              <div style={{ paddingTop: "1.5rem" }}>
+                <Results scores={scores} typingScore={typingScore} onRestart={restart} saving={saving} saved={saved} candidato={candidato} />
+              </div>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

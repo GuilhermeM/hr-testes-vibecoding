@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste de Sele\u00e7\u00e3o - Vibecoding</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f8fafc; min-height: 100vh; font-family: 'Outfit', system-ui, sans-serif; color: #1e293b; }
+    input:focus, button:focus { outline: none; }
+    ::selection { background: rgba(99,102,241,0.25); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState } = React;
+
+    function App() {
+      const [nome, setNome] = useState("");
+      const [email, setEmail] = useState("");
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        if (nome.trim() && email.trim()) {
+          const params = new URLSearchParams({ nome: nome.trim(), email: email.trim() });
+          window.location.href = `teste-digitacao.html?${params.toString()}`;
+        }
+      };
+
+      return (
+        <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
+          <div style={{ textAlign: "center", maxWidth: 520, padding: "2rem", width: "100%" }}>
+
+            <div style={{ fontSize: "4rem", marginBottom: "1rem", filter: "drop-shadow(0 0 30px rgba(99,102,241,0.15))" }}>🧑‍💻</div>
+
+            <h1 style={{
+              fontSize: "2rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "0.5rem",
+              background: "linear-gradient(135deg, #1e293b, #475569)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+            }}>
+              Teste de Selecao
+            </h1>
+            <p style={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.7, marginBottom: "2rem" }}>
+              Bem-vindo ao processo seletivo para a vaga de vibecoding. O teste tem <strong style={{ color: "#1e293b" }}>2 partes</strong> e leva aproximadamente 15 minutos.
+            </p>
+
+            {/* Cards das partes */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "2rem" }}>
+              <div style={{
+                background: "#ffffff", borderRadius: 14, padding: "1.25rem", textAlign: "left",
+                border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                    color: "#fff", fontSize: "0.8rem", fontWeight: 700,
+                  }}>1</span>
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>Digitacao</span>
+                </div>
+                <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.5 }}>
+                  Mede sua velocidade e precisao ao digitar um texto.
+                </p>
+                <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+                  <span style={{ fontSize: "0.7rem", background: "#f1f5f9", color: "#475569", padding: "0.2rem 0.6rem", borderRadius: 6 }}>~3 min</span>
+                  <span style={{ fontSize: "0.7rem", background: "#f1f5f9", color: "#475569", padding: "0.2rem 0.6rem", borderRadius: 6 }}>WPM</span>
+                </div>
+              </div>
+
+              <div style={{
+                background: "#ffffff", borderRadius: 14, padding: "1.25rem", textAlign: "left",
+                border: "1px solid #e2e8f0", boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.5rem" }}>
+                  <span style={{
+                    display: "inline-flex", alignItems: "center", justifyContent: "center",
+                    width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                    color: "#fff", fontSize: "0.8rem", fontWeight: 700,
+                  }}>2</span>
+                  <span style={{ fontWeight: 700, fontSize: "1rem" }}>Fluencia Digital</span>
+                </div>
+                <p style={{ color: "#64748b", fontSize: "0.85rem", lineHeight: 1.5 }}>
+                  Avalia conhecimentos de atalhos, navegador, arquivos, logica e pesquisa.
+                </p>
+                <div style={{ marginTop: "0.5rem", display: "flex", gap: "0.5rem" }}>
+                  <span style={{ fontSize: "0.7rem", background: "#f1f5f9", color: "#475569", padding: "0.2rem 0.6rem", borderRadius: 6 }}>~10 min</span>
+                  <span style={{ fontSize: "0.7rem", background: "#f1f5f9", color: "#475569", padding: "0.2rem 0.6rem", borderRadius: 6 }}>6 areas</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Formulario */}
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
+              <input
+                type="text"
+                placeholder="Seu nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                required
+                style={{
+                  padding: "0.9rem 1.2rem", border: "2px solid #e2e8f0", borderRadius: 12,
+                  fontSize: "1rem", background: "#ffffff", color: "#1e293b",
+                  transition: "border-color 0.2s",
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#4f46e5"}
+                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+              />
+              <input
+                type="email"
+                placeholder="Seu email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={{
+                  padding: "0.9rem 1.2rem", border: "2px solid #e2e8f0", borderRadius: 12,
+                  fontSize: "1rem", background: "#ffffff", color: "#1e293b",
+                  transition: "border-color 0.2s",
+                }}
+                onFocus={(e) => e.target.style.borderColor = "#4f46e5"}
+                onBlur={(e) => e.target.style.borderColor = "#e2e8f0"}
+              />
+              <button
+                type="submit"
+                style={{
+                  padding: "1rem", background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                  color: "#fff", border: "none", borderRadius: 14, fontSize: "1.15rem", fontWeight: 700,
+                  cursor: "pointer", boxShadow: "0 4px 24px rgba(79,70,229,0.3)",
+                  transition: "transform 0.15s, box-shadow 0.15s", marginTop: "0.25rem",
+                }}
+                onMouseOver={(e) => { e.target.style.transform = "scale(1.03)"; e.target.style.boxShadow = "0 6px 32px rgba(79,70,229,0.4)"; }}
+                onMouseOut={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 4px 24px rgba(79,70,229,0.3)"; }}
+              >
+                Comecar Teste →
+              </button>
+            </form>
+
+            <p style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: "1.5rem", lineHeight: 1.5 }}>
+              Seus dados serao usados apenas para identificar seus resultados no processo seletivo.
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>

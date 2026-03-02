@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teste de Digitação</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #f8fafc; min-height: 100vh; font-family: 'Outfit', system-ui, sans-serif; color: #1e293b; }
+    textarea:focus, button:focus, input:focus { outline: none; }
+    ::selection { background: rgba(99,102,241,0.25); }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+    const { useState, useRef, useEffect, useCallback } = React;
+
+    const SUPABASE_URL = "https://ttfdmujtekgkaeenvgjw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InR0ZmRtdWp0ZWtna2FlZW52Z2p3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI0NzQxMDAsImV4cCI6MjA4ODA1MDEwMH0.fWlFMi_39fIePMj4rHY2Xz1AzJrXmzU99Tg6UrbwAXA";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const TEXTS = [
+      "O vibecoding permite criar programas usando inteligencia artificial. Voce descreve o que quer em linguagem natural e a IA gera o codigo. Para isso funcionar bem, voce precisa digitar com agilidade, saber navegar no computador e entender como as coisas funcionam na web. A pratica diaria e o que separa quem evolui rapido de quem fica travado.",
+      "Quando um programador encontra um erro no codigo, ele nao entra em panico. Ele le a mensagem de erro com calma, copia o texto e pesquisa no Google. Geralmente, alguem ja passou pelo mesmo problema antes. Sites como Stack Overflow e a documentacao oficial sao os melhores amigos de quem programa. Resolver bugs e uma habilidade que melhora com o tempo.",
+      "Organizar arquivos no computador e uma habilidade essencial. Crie pastas com nomes claros, separe projetos em diretorios diferentes e nunca jogue tudo na area de trabalho. Um bom desenvolvedor sabe exatamente onde cada arquivo esta. Isso economiza tempo e evita confusao quando o projeto cresce e fica mais complexo.",
+      "A internet funciona como uma rede gigante de computadores conectados. Quando voce digita um endereco no navegador, ele envia uma requisicao para um servidor, que responde com os arquivos da pagina. Esses arquivos sao escritos em HTML, CSS e JavaScript. O navegador interpreta esse codigo e mostra o resultado visual na sua tela.",
+      "Aprender a programar e como aprender um novo idioma. No comeco, tudo parece confuso e voce nao entende nada. Mas com pratica constante, as coisas comecam a fazer sentido. O segredo e nao desistir nos primeiros obstaculos. Cada erro e uma oportunidade de aprender algo novo. A persistencia vale mais do que o talento natural.",
+    ];
+
+    // Medias de referencia (WPM para digitadores em portugues)
+    const BENCHMARKS = [
+      { label: "Iniciante", min: 0, max: 20, color: "#ef4444", emoji: "🐢" },
+      { label: "Basico", min: 20, max: 30, color: "#f97316", emoji: "🚶" },
+      { label: "Intermediario", min: 30, max: 45, color: "#f59e0b", emoji: "🏃" },
+      { label: "Bom", min: 45, max: 60, color: "#22c55e", emoji: "🚀" },
+      { label: "Avancado", min: 60, max: 80, color: "#3b82f6", emoji: "⚡" },
+      { label: "Profissional", min: 80, max: 999, color: "#8b5cf6", emoji: "🏆" },
+    ];
+
+    const AVG_WPM = 35; // media geral de digitacao em portugues
+
+    function getBenchmark(wpm) {
+      return BENCHMARKS.find(b => wpm >= b.min && wpm < b.max) || BENCHMARKS[BENCHMARKS.length - 1];
+    }
+
+    function getAccuracyLabel(acc) {
+      if (acc >= 98) return { label: "Perfeito", color: "#16a34a" };
+      if (acc >= 95) return { label: "Excelente", color: "#2563eb" };
+      if (acc >= 90) return { label: "Bom", color: "#d97706" };
+      if (acc >= 80) return { label: "Regular", color: "#ea580c" };
+      return { label: "Precisa melhorar", color: "#dc2626" };
+    }
+
+    function App() {
+      // Ler nome/email dos query params da URL (vem do index.html)
+      const urlParams = new URLSearchParams(window.location.search);
+      const candidato = { nome: urlParams.get("nome") || "", email: urlParams.get("email") || "" };
+
+      const [screen, setScreen] = useState("start"); // start, typing, result
+      const [text, setText] = useState("");
+      const [input, setInput] = useState("");
+      const [startTime, setStartTime] = useState(null);
+      const [elapsed, setElapsed] = useState(0);
+      const [result, setResult] = useState(null);
+      const [cursorBlink, setCursorBlink] = useState(true);
+      const [saving, setSaving] = useState(false);
+      const [saved, setSaved] = useState(false);
+      const inputRef = useRef(null);
+      const timerRef = useRef(null);
+
+      const pickText = () => {
+        const idx = Math.floor(Math.random() * TEXTS.length);
+        return TEXTS[idx];
+      };
+
+      const startTest = () => {
+        const t = pickText();
+        setText(t);
+        setInput("");
+        setStartTime(null);
+        setElapsed(0);
+        setResult(null);
+        setSaved(false);
+        setScreen("typing");
+        setTimeout(() => inputRef.current?.focus(), 150);
+      };
+
+      // Timer
+      useEffect(() => {
+        if (screen === "typing" && startTime) {
+          timerRef.current = setInterval(() => {
+            setElapsed(((Date.now() - startTime) / 1000));
+          }, 100);
+          return () => clearInterval(timerRef.current);
+        }
+      }, [screen, startTime]);
+
+      // Cursor blink
+      useEffect(() => {
+        const interval = setInterval(() => setCursorBlink(b => !b), 530);
+        return () => clearInterval(interval);
+      }, []);
+
+      const handleChange = (e) => {
+        const val = e.target.value;
+
+        // Iniciar timer no primeiro caractere
+        if (!startTime && val.length > 0) {
+          setStartTime(Date.now());
+        }
+
+        setInput(val);
+
+        if (val.length >= text.length) {
+          finishTest(val);
+        }
+      };
+
+      const finishTest = (val) => {
+        clearInterval(timerRef.current);
+        const totalTime = (Date.now() - startTime) / 1000; // em segundos
+        const minutes = totalTime / 60;
+
+        // Palavras digitadas
+        const wordsTyped = val.trim().split(/\s+/).length;
+        const wpm = Math.round(wordsTyped / minutes);
+
+        // Precisao por caractere
+        let correctChars = 0;
+        for (let i = 0; i < Math.min(val.length, text.length); i++) {
+          if (val[i] === text[i]) correctChars++;
+        }
+        const accuracy = Math.round((correctChars / text.length) * 100);
+
+        // Caracteres por minuto
+        const cpm = Math.round(val.length / minutes);
+
+        // Erros
+        const errors = text.length - correctChars;
+
+        // WPM liquido (descontando erros)
+        const grossWpm = wpm;
+        const netWpm = Math.max(0, Math.round((wordsTyped - (errors / 5)) / minutes));
+
+        // Comparacao com media
+        const vsAvg = Math.round(((netWpm - AVG_WPM) / AVG_WPM) * 100);
+
+        // Percentil estimado
+        let percentile;
+        if (netWpm >= 80) percentile = 99;
+        else if (netWpm >= 65) percentile = 95;
+        else if (netWpm >= 55) percentile = 90;
+        else if (netWpm >= 45) percentile = 75;
+        else if (netWpm >= 35) percentile = 50;
+        else if (netWpm >= 25) percentile = 30;
+        else if (netWpm >= 15) percentile = 15;
+        else percentile = 5;
+
+        const resultData = {
+          wpm: grossWpm,
+          netWpm,
+          cpm,
+          accuracy,
+          errors,
+          totalTime: Math.round(totalTime),
+          vsAvg,
+          percentile,
+          totalChars: text.length,
+          correctChars,
+        };
+        setResult(resultData);
+        setScreen("result");
+
+        // Salvar no Supabase
+        setSaving(true);
+        const bench = getBenchmark(netWpm);
+        supabase.from("resultados_digitacao").insert({
+          nome: candidato.nome,
+          email: candidato.email,
+          wpm_bruto: grossWpm,
+          wpm_liquido: netWpm,
+          cpm: cpm,
+          precisao: accuracy,
+          erros: errors,
+          tempo_total: Math.round(totalTime),
+          vs_media: vsAvg,
+          percentil: percentile,
+          total_chars: text.length,
+          chars_corretos: correctChars,
+          texto_usado: text,
+          texto_digitado: val,
+          nivel: bench.label,
+        }).then(({ error }) => {
+          setSaving(false);
+          if (!error) setSaved(true);
+          else console.error("Erro ao salvar:", error);
+        });
+      };
+
+      const getCharState = (i) => {
+        if (i >= input.length) return "pending";
+        return input[i] === text[i] ? "correct" : "wrong";
+      };
+
+      const formatTime = (s) => {
+        const min = Math.floor(s / 60);
+        const sec = Math.floor(s % 60);
+        return `${min}:${sec.toString().padStart(2, "0")}`;
+      };
+
+      // -- TELA INICIAL --
+      if (screen === "start") {
+        return (
+          <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f8fafc" }}>
+            <div style={{ textAlign: "center", maxWidth: 520, padding: "2rem" }}>
+              <div style={{ fontSize: "4.5rem", marginBottom: "1rem", filter: "drop-shadow(0 0 30px rgba(99,102,241,0.15))" }}>⌨️</div>
+              <h1 style={{
+                fontSize: "2.2rem", fontWeight: 800, letterSpacing: "-0.03em", marginBottom: "0.75rem",
+                background: "linear-gradient(135deg, #1e293b, #475569)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent",
+              }}>
+                Teste de Digitacao
+              </h1>
+              <p style={{ color: "#64748b", fontSize: "1rem", lineHeight: 1.7, marginBottom: "2rem" }}>
+                Meca sua velocidade e precisao de digitacao. O texto nao tem acentos para focar na agilidade pura. Seu resultado sera comparado com a media geral.
+              </p>
+
+              <div style={{
+                display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "2.5rem",
+              }}>
+                {[
+                  { icon: "🏎️", label: "Velocidade", sub: "WPM" },
+                  { icon: "🎯", label: "Precisao", sub: "%" },
+                  { icon: "📊", label: "Ranking", sub: "vs media" },
+                ].map((item) => (
+                  <div key={item.label} style={{
+                    background: "#ffffff", borderRadius: 12, padding: "1rem 0.5rem",
+                    border: "1px solid #e2e8f0", textAlign: "center",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                  }}>
+                    <div style={{ fontSize: "1.5rem", marginBottom: "0.3rem" }}>{item.icon}</div>
+                    <div style={{ fontSize: "0.8rem", color: "#475569", fontWeight: 500 }}>{item.label}</div>
+                    <div style={{ fontSize: "0.65rem", color: "#94a3b8" }}>{item.sub}</div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                onClick={startTest}
+                style={{
+                  padding: "1rem 3rem", background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                  color: "#fff", border: "none", borderRadius: 14, fontSize: "1.15rem", fontWeight: 700,
+                  cursor: "pointer", boxShadow: "0 4px 24px rgba(79,70,229,0.3)",
+                  transition: "transform 0.15s, box-shadow 0.15s",
+                }}
+                onMouseOver={(e) => { e.target.style.transform = "scale(1.05)"; e.target.style.boxShadow = "0 6px 32px rgba(79,70,229,0.4)"; }}
+                onMouseOut={(e) => { e.target.style.transform = "scale(1)"; e.target.style.boxShadow = "0 4px 24px rgba(79,70,229,0.3)"; }}
+              >
+                Comecar Teste →
+              </button>
+
+              <p style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: "1.5rem" }}>
+                Texto aleatorio a cada tentativa
+              </p>
+            </div>
+          </div>
+        );
+      }
+
+      // -- TELA DE DIGITACAO --
+      if (screen === "typing") {
+        const progress = text.length > 0 ? (input.length / text.length) * 100 : 0;
+        const liveWpm = startTime && elapsed > 3
+          ? Math.round((input.trim().split(/\s+/).filter(w => w).length) / (elapsed / 60))
+          : 0;
+
+        return (
+          <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+            {/* Top bar */}
+            <div style={{
+              padding: "1rem 1.5rem", borderBottom: "1px solid #e2e8f0", background: "#ffffff",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <span style={{ fontSize: "1.2rem" }}>⌨️</span>
+                <span style={{ fontWeight: 700, fontSize: "1rem", color: "#1e293b" }}>Teste de Digitacao</span>
+              </div>
+              <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#1e293b", fontFamily: "'JetBrains Mono', monospace" }}>
+                    {formatTime(elapsed)}
+                  </div>
+                  <div style={{ fontSize: "0.65rem", color: "#64748b" }}>tempo</div>
+                </div>
+                {liveWpm > 0 && (
+                  <div style={{ textAlign: "center" }}>
+                    <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#4f46e5", fontFamily: "'JetBrains Mono', monospace" }}>
+                      {liveWpm}
+                    </div>
+                    <div style={{ fontSize: "0.65rem", color: "#64748b" }}>wpm</div>
+                  </div>
+                )}
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: "1.2rem", fontWeight: 700, color: "#1e293b", fontFamily: "'JetBrains Mono', monospace" }}>
+                    {input.length}/{text.length}
+                  </div>
+                  <div style={{ fontSize: "0.65rem", color: "#64748b" }}>chars</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Progress */}
+            <div style={{ height: 3, background: "#e2e8f0" }}>
+              <div style={{
+                height: "100%", width: `${progress}%`,
+                background: "linear-gradient(90deg, #4f46e5, #7c3aed)",
+                transition: "width 0.2s ease",
+              }} />
+            </div>
+
+            <div style={{ maxWidth: 700, margin: "0 auto", padding: "2rem 1.5rem" }}>
+              {/* Texto para digitar */}
+              <div style={{
+                background: "#ffffff", borderRadius: 16, padding: "1.5rem",
+                marginBottom: "1.5rem", lineHeight: 2, fontSize: "1.15rem",
+                fontFamily: "'JetBrains Mono', monospace", letterSpacing: "0.01em",
+                border: "1px solid #e2e8f0", position: "relative",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                {text.split("").map((char, i) => {
+                  const state = getCharState(i);
+                  let color = "#94a3b8"; // pending - cinza claro legivel
+                  let bg = "transparent";
+                  let textDecoration = "none";
+
+                  if (state === "correct") { color = "#1e293b"; } // texto escuro, alto contraste
+                  if (state === "wrong") { color = "#dc2626"; bg = "rgba(239,68,68,0.1)"; textDecoration = "none"; }
+                  if (i === input.length) { bg = cursorBlink ? "rgba(79,70,229,0.35)" : "rgba(79,70,229,0.12)"; }
+
+                  return (
+                    <span key={i} style={{ color, backgroundColor: bg, borderRadius: 2, textDecoration, transition: "color 0.08s, background-color 0.08s" }}>
+                      {char}
+                    </span>
+                  );
+                })}
+              </div>
+
+              {/* Input */}
+              <textarea
+                ref={inputRef}
+                value={input}
+                onChange={handleChange}
+                onPaste={(e) => e.preventDefault()}
+                placeholder={startTime ? "" : "Comece a digitar..."}
+                spellCheck={false}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                style={{
+                  width: "100%", minHeight: 120, background: "#ffffff", color: "#1e293b",
+                  border: "2px solid #4f46e5", borderRadius: 14, padding: "1.25rem",
+                  fontSize: "1.05rem", fontFamily: "'JetBrains Mono', monospace",
+                  resize: "none", outline: "none", lineHeight: 1.8,
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                }}
+              />
+
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "0.75rem" }}>
+                {input.length > 0 && (
+                  <button
+                    onClick={() => finishTest(input)}
+                    style={{
+                      padding: "0.6rem 1.5rem", background: "#f1f5f9", color: "#475569",
+                      border: "1px solid #cbd5e1", borderRadius: 10, cursor: "pointer", fontSize: "0.85rem",
+                    }}
+                  >
+                    Finalizar antecipado
+                  </button>
+                )}
+                <p style={{ color: "#94a3b8", fontSize: "0.75rem", marginLeft: "auto" }}>
+                  Dica: foque na precisao, a velocidade vem com a pratica.
+                </p>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // -- TELA DE RESULTADO --
+      if (screen === "result" && result) {
+        const bench = getBenchmark(result.netWpm);
+        const accLabel = getAccuracyLabel(result.accuracy);
+        const vsSign = result.vsAvg >= 0 ? "+" : "";
+        const vsColor = result.vsAvg >= 0 ? "#22c55e" : "#ef4444";
+
+        return (
+          <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
+            <div style={{ maxWidth: 600, margin: "0 auto", padding: "2rem 1.5rem" }}>
+
+              {/* Header resultado */}
+              <div style={{ textAlign: "center", marginBottom: "2rem" }}>
+                <div style={{ fontSize: "4rem", marginBottom: "0.5rem" }}>{bench.emoji}</div>
+                <h1 style={{
+                  fontSize: "1.8rem", fontWeight: 800, color: bench.color, marginBottom: "0.25rem",
+                }}>
+                  {bench.label}
+                </h1>
+                <p style={{ color: "#64748b", fontSize: "0.9rem" }}>
+                  Voce esta no top {100 - result.percentile > 0 ? (100 - result.percentile) + "%" : "1%"} dos digitadores
+                </p>
+              </div>
+
+              {/* Cards principais */}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginBottom: "1.5rem" }}>
+                <div style={{
+                  background: "#ffffff", borderRadius: 14, padding: "1.25rem", border: "1px solid #e2e8f0", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                }}>
+                  <div style={{ fontSize: "2.5rem", fontWeight: 800, color: bench.color, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {result.netWpm}
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>WPM liquido</div>
+                </div>
+                <div style={{
+                  background: "#ffffff", borderRadius: 14, padding: "1.25rem", border: "1px solid #e2e8f0", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                }}>
+                  <div style={{ fontSize: "2.5rem", fontWeight: 800, color: accLabel.color, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {result.accuracy}%
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>precisao</div>
+                </div>
+                <div style={{
+                  background: "#ffffff", borderRadius: 14, padding: "1.25rem", border: "1px solid #e2e8f0", textAlign: "center",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+                }}>
+                  <div style={{ fontSize: "2.5rem", fontWeight: 800, color: vsColor, fontFamily: "'JetBrains Mono', monospace" }}>
+                    {vsSign}{result.vsAvg}%
+                  </div>
+                  <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.25rem" }}>vs media ({AVG_WPM} wpm)</div>
+                </div>
+              </div>
+
+              {/* Detalhes */}
+              <div style={{
+                background: "#ffffff", borderRadius: 14, padding: "1.25rem", border: "1px solid #e2e8f0", marginBottom: "1.5rem",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#475569", marginBottom: "1rem" }}>Detalhes</h3>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem" }}>
+                  {[
+                    { label: "WPM bruto", value: result.wpm },
+                    { label: "WPM liquido", value: result.netWpm },
+                    { label: "Caracteres/min", value: result.cpm },
+                    { label: "Tempo total", value: `${result.totalTime}s` },
+                    { label: "Caracteres corretos", value: `${result.correctChars}/${result.totalChars}` },
+                    { label: "Erros", value: result.errors },
+                  ].map((item) => (
+                    <div key={item.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span style={{ color: "#64748b", fontSize: "0.85rem" }}>{item.label}</span>
+                      <span style={{ color: "#1e293b", fontSize: "0.9rem", fontWeight: 600, fontFamily: "'JetBrains Mono', monospace" }}>{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Escala visual de benchmark */}
+              <div style={{
+                background: "#ffffff", borderRadius: 14, padding: "1.25rem", border: "1px solid #e2e8f0", marginBottom: "1.5rem",
+                boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
+              }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 600, color: "#475569", marginBottom: "1rem" }}>Onde voce esta</h3>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {BENCHMARKS.map((b) => {
+                    const isActive = b.label === bench.label;
+                    const barMax = b.max === 999 ? 100 : b.max;
+                    const barWidth = isActive
+                      ? Math.min(100, ((result.netWpm - b.min) / (barMax - b.min)) * 100)
+                      : (result.netWpm >= b.max ? 100 : 0);
+                    return (
+                      <div key={b.label} style={{
+                        display: "flex", alignItems: "center", gap: "0.75rem",
+                        opacity: isActive ? 1 : (result.netWpm >= b.min ? 0.6 : 0.25),
+                      }}>
+                        <span style={{ fontSize: "1rem", width: 24 }}>{b.emoji}</span>
+                        <span style={{
+                          fontSize: "0.8rem", color: isActive ? b.color : "#64748b", fontWeight: isActive ? 700 : 400,
+                          width: 110, flexShrink: 0,
+                        }}>
+                          {b.label}
+                        </span>
+                        <div style={{
+                          flex: 1, height: 8, background: "#e2e8f0", borderRadius: 4, overflow: "hidden",
+                        }}>
+                          <div style={{
+                            width: `${barWidth}%`, height: "100%", background: isActive ? b.color : "#cbd5e1",
+                            borderRadius: 4, transition: "width 1s ease",
+                          }} />
+                        </div>
+                        <span style={{
+                          fontSize: "0.7rem", color: "#64748b", width: 55, textAlign: "right", flexShrink: 0,
+                        }}>
+                          {b.min}-{b.max === 999 ? "80+" : b.max} wpm
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Feedback */}
+              <div style={{
+                background: `linear-gradient(135deg, ${bench.color}10, ${bench.color}05)`,
+                borderRadius: 14, padding: "1.25rem", border: `1px solid ${bench.color}25`, marginBottom: "2rem",
+              }}>
+                <p style={{ color: "#334155", fontSize: "0.9rem", lineHeight: 1.7 }}>
+                  {result.netWpm >= 60 && "Excelente! Sua digitacao esta bem acima da media. Voce tem fluencia de sobra para vibecodar sem gargalos."}
+                  {result.netWpm >= 45 && result.netWpm < 60 && "Muito bom! Voce digita acima da media. Sua velocidade nao vai te atrasar no vibecoding."}
+                  {result.netWpm >= 35 && result.netWpm < 45 && "Voce esta na media. Da pra comecar a vibecodar, mas investir 15min/dia em pratica vai acelerar bastante seu fluxo."}
+                  {result.netWpm >= 25 && result.netWpm < 35 && "Sua digitacao esta abaixo da media. Recomendo praticar por 1-2 semanas antes de comecar. Tente o keybr.com ou monkeytype.com."}
+                  {result.netWpm < 25 && "Sua digitacao precisa de bastante pratica. Dedique 15-20min por dia no keybr.com por pelo menos 2-3 semanas antes de iniciar o vibecoding."}
+                  {result.accuracy < 90 && " Foque bastante na precisao — digitar rapido com muitos erros nao ajuda."}
+                  {result.accuracy >= 98 && " Sua precisao esta impecavel!"}
+                </p>
+              </div>
+
+              {/* Status de salvamento */}
+              <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                {saving && (
+                  <span style={{ color: "#64748b", fontSize: "0.85rem" }}>Salvando resultado...</span>
+                )}
+                {saved && (
+                  <div>
+                    <span style={{ color: "#22c55e", fontSize: "0.85rem", fontWeight: 500 }}>Parte 1 concluida! Resultado registrado.</span>
+                    <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "0.5rem" }}>Agora vamos para a Parte 2: Teste de Fluencia Digital.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Botao continuar */}
+              <div style={{ display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+                <button
+                  onClick={() => {
+                    const params = new URLSearchParams({ nome: candidato.nome, email: candidato.email });
+                    window.location.href = `teste-fluencia-digital.html?${params.toString()}`;
+                  }}
+                  disabled={!saved}
+                  style={{
+                    padding: "0.85rem 2.5rem",
+                    background: saved ? "linear-gradient(135deg, #4f46e5, #7c3aed)" : "#cbd5e1",
+                    color: "#fff", border: "none", borderRadius: 12, fontSize: "1rem", fontWeight: 700,
+                    cursor: saved ? "pointer" : "not-allowed",
+                    boxShadow: saved ? "0 4px 24px rgba(79,70,229,0.3)" : "none",
+                    transition: "transform 0.15s",
+                  }}
+                  onMouseOver={(e) => { if (saved) e.target.style.transform = "scale(1.05)"; }}
+                  onMouseOut={(e) => e.target.style.transform = "scale(1)"}
+                >
+                  {saved ? "Continuar para Parte 2 →" : "Salvando..."}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      return null;
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById("root"));
+    root.render(<App />);
+  </script>
+</body>
+</html>
